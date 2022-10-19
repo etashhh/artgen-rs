@@ -1,5 +1,5 @@
 [package]
-name = "artgen-rs"
+name = "artgen"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.64"
-clap = { version = "3.1.8", features = ["derive"] }
+clap = { version = "3.1.8", features = ["cargo"] }
 console = "0.15.1"
 image = "0.24.1"
 rand = "0.8.5"
