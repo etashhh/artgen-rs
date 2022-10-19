@@ -1,4 +1,4 @@
-# artengine-rs
+# artgen-rs
 
 ## README WIP
 
