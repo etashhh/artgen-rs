@@ -1,4 +1,4 @@
-use clap::{crate_description, crate_name, crate_version, AppSettings, Arg, Command};
+use clap::{crate_description, crate_name, crate_version, Arg, Command};
 
 pub fn build_app() -> Command<'static> {
     Command::new(crate_name!())
@@ -15,7 +15,15 @@ pub fn build_app() -> Command<'static> {
                 .alias("create")
                 .about("Generate asset(s) based on given input layers")
                 .arg(
+                    Arg::new("root")
+                        .help("Root directory where the layers are stored")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
                     Arg::new("number")
+                        .long("number")
+                        .short('n')
                         .help("Number of assets to generate in the current run")
                         .takes_value(true)
                         .default_value("5")
