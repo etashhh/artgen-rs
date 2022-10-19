@@ -1,4 +1,4 @@
-# artgen-rs
+# artgen
 
 ## README WIP
 
@@ -29,10 +29,12 @@ find . -name ".DS_Store" -print -delete
 
 ## How to Use
 
+**10/19/22:** I need to update the README to reflect the basic changes as I transitioned this to a CLI program based on [Clap](https://github.com/clap-rs/clap) and also haven't published the crate yet. A basic way to use it is outlined below:
+
 Clone the repository and make a directory (e.g., `layers/`) that houses all layer subdirectories as shown in the directory structure above. From the project root, run the following command from the terminal:
 
 ```rust
-cargo run --release layers
+cargo run --release layers -n <number of desired assets>
 ```
 
 If structured correctly, the program will start outputting the assets into a directory called `outputs/` and the metadata into a directory called `metadata/`. If there are already assets in the `outputs/` and `metadata/` directories, the engine will start outputting IDs from the last available number (e.g., if IDs 0 - 200 already exist, once the engine is run again, the first ID outputted will be 201).
