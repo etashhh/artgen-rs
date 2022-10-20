@@ -18,7 +18,7 @@ impl Command {
     pub fn read(command: &str) -> Command {
         match command {
             "generate" => Command::Generic(Box::new(Generate)),
-            _ => unreachable!("Unknown subcommand"),
+            _ => panic!("Unknown subcommand"),
         }
     }
 

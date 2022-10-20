@@ -39,7 +39,7 @@ fn run() -> anyhow::Result<ExitCode> {
         let command = Command::read(subcommand);
         command.execute(matches);
     } else {
-        unreachable!("Subcommand is required");
+        panic!("Subcommand is required");
     }
 
     Ok(0)

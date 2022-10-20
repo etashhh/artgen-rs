@@ -1,4 +1,3 @@
-use crate::commands::prelude::*;
 use anyhow::{Context, Result};
 use console::style;
 use image::imageops::overlay;
@@ -10,7 +9,9 @@ use std::fs;
 use std::io::BufWriter;
 use std::path::Path;
 
-use crate::{constants::*, utils::crop_characters};
+use crate::commands::prelude::*;
+use crate::constants::*;
+use crate::utils::crop_characters;
 
 #[derive(Serialize, Deserialize)]
 pub struct Metadata {
