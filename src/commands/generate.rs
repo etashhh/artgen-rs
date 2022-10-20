@@ -30,7 +30,8 @@ impl GenericCommand for Generate {
         // Get the folders for each layer
         // TODO add better error handling to pass info to the user
         let root_dir = fs::read_dir(path)
-            .with_context(|| format!("could not read provided directory `{}`", path))?;
+            .with_context(|| ArtGenError::MissingDirectory((path.to_string())))
+            .unwrap();
 
         let mut subfolders: Vec<_> = root_dir.map(|r| r.unwrap()).collect();
 
@@ -43,7 +44,8 @@ impl GenericCommand for Generate {
             .value_of("number")
             .expect("required argument")
             .parse::<usize>()
-            .expect("Could not parse number");
+            .map_err(|_| ArtGenError::NonNegativeNumberRequired)
+            .unwrap();
 
         println!(
             "\n{} {}\n",
