@@ -13,7 +13,7 @@ impl ArtGenError {
     pub fn output(&self) -> String {
         match self {
             ArtGenError::MissingDirectory(directory) => {
-                format!("Could not locate directory `{}`", directory)
+                format!("Could not locate directory `{:?}`", directory)
             }
             ArtGenError::NonNegativeNumberRequired => {
                 "Non-negative number required for collection size".into()

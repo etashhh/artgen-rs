@@ -2,7 +2,7 @@ use console::style;
 
 use artgen::{app::build_app, commands::Command, constants::*};
 
-use anyhow;
+use anyhow::Result;
 
 type ExitCode = i32;
 
@@ -31,7 +31,7 @@ fn main() {
     }
 }
 
-fn run() -> anyhow::Result<ExitCode> {
+fn run() -> Result<ExitCode> {
     let app = build_app();
     let matches = app.get_matches();
 

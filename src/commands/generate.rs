@@ -30,7 +30,7 @@ impl GenericCommand for Generate {
         // Get the folders for each layer
         // TODO add better error handling to pass info to the user
         let root_dir = fs::read_dir(path)
-            .with_context(|| ArtGenError::MissingDirectory((path.to_string())))
+            .with_context(|| ArtGenError::MissingDirectory(path.to_string()))
             .unwrap();
 
         let mut subfolders: Vec<_> = root_dir.map(|r| r.unwrap()).collect();
@@ -94,7 +94,6 @@ impl GenericCommand for Generate {
 
         // Create the desired number of assets for the collection
         for i in 0..collection_size {
-            // TODO: This should be updated to be specified in the config or as a CLI arg
             let current_image;
             let base_layer;
             let metadata;
@@ -117,7 +116,7 @@ impl GenericCommand for Generate {
 
             base_layer.save(format!("{}/{}.png", output_dir, current_id))?;
 
-            let f = fs::File::create(format!("{}/{}", metadata_dir, current_id.to_string()))
+            let f = fs::File::create(format!("{}/{}", metadata_dir, current_id))
                 .expect("Unable to create the metadata file");
             let bw = BufWriter::new(f);
             serde_json::to_writer_pretty(bw, &metadata).expect("Unable to write the metadata file");
@@ -132,7 +131,7 @@ impl GenericCommand for Generate {
 fn gen_asset(
     rarity_tracker: &[Vec<(String, u32)>],
     current_id: usize,
-) -> anyhow::Result<(
+) -> Result<(
     std::collections::BTreeSet<std::string::String>,
     image::DynamicImage,
     Metadata,
