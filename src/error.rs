@@ -6,9 +6,9 @@ use crate::constants::*;
 #[derive(Debug)]
 pub enum ArtGenError {
     MissingDirectory(String),
-    NonNegativeNumberRequired,
+    InvalidCollectionSize,
 }
-
+/*
 impl ArtGenError {
     pub fn output(&self) -> String {
         match self {
@@ -21,7 +21,7 @@ impl ArtGenError {
         }
     }
 }
-
+*/
 impl fmt::Display for ArtGenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -34,11 +34,18 @@ impl fmt::Display for ArtGenError {
                     directory
                 )
             }
-            Self::NonNegativeNumberRequired => {
-                write!(f, "Non-negative number required for collection size")
+            Self::InvalidCollectionSize => {
+                write!(
+                    f,
+                    "\n\n{}{} ",
+                    ERROR_EMOJI,
+                    style("Collection size `n` must be a positive integer value")
+                        .red()
+                        .bold(),
+                )
             }
         }
     }
 }
 
-pub type Result<T> = std::result::Result<T, ArtGenError>;
+// pub type Result<T> = std::result::Result<T, ArtGenError>;

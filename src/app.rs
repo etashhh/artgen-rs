@@ -39,8 +39,21 @@ pub fn build_app() -> Command<'static> {
                         )
                         .takes_value(true)
                         .possible_values(&["yes", "y", "no", "n"])
-                        .value_name("flag")
+                        .value_name("unique flag")
                         .default_value("yes"),
+                )
+                .arg(
+                    Arg::new("fresh")
+                        .long("fresh")
+                        .short('f')
+                        .help(
+                            "Boolean flag to indicate whether the generated set \
+                                should wipe existing assets and start fresh",
+                        )
+                        .takes_value(true)
+                        .possible_values(&["yes", "no"])
+                        .value_name("fresh flag")
+                        .default_value("no"),
                 ),
         )
 }

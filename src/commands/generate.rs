@@ -1,6 +1,7 @@
 use anyhow::{Context, Result};
 use console::style;
 use image::imageops::overlay;
+use image::DynamicImage;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use serde::{Deserialize, Serialize};
@@ -11,14 +12,26 @@ use std::path::Path;
 
 use crate::commands::prelude::*;
 use crate::constants::*;
-use crate::utils::crop_characters;
+
+struct Asset<'a> {
+    layers: BTreeSet<String>,
+    base_layer: DynamicImage,
+    metadata: Metadata<'a>,
+}
 
 #[derive(Serialize, Deserialize)]
-pub struct Metadata {
+struct Metadata<'a> {
     name: String,
     description: String,
     image: String,
-    attributes: Vec<BTreeMap<String, String>>,
+    #[serde(borrow = "'a ")]
+    attributes: Vec<Trait<'a>>,
+}
+
+#[derive(Serialize, Deserialize)]
+struct Trait<'a> {
+    trait_type: &'a str,
+    value: &'a str,
 }
 
 pub struct Generate;
@@ -28,29 +41,28 @@ impl GenericCommand for Generate {
         let path = matches.value_of("root").expect("required argument");
 
         // Get the folders for each layer
-        // TODO add better error handling to pass info to the user
         let root_dir = fs::read_dir(path)
             .with_context(|| ArtGenError::MissingDirectory(path.to_string()))
             .unwrap();
 
-        let mut subfolders: Vec<_> = root_dir.map(|r| r.unwrap()).collect();
+        let mut subdirs: Vec<fs::DirEntry> = root_dir.map(|subdir| subdir.unwrap()).collect();
 
-        // Sort the subfolders in alphanumeric order
+        // Sort the subdirs in alphanumeric order
         // The subfolder names should be prepended with a number corresponding to the desired order of layering
         // (e.g. 01<base_layer>, 02<middle_layer>, 03<top_layer>)
-        subfolders.sort_by_key(|dir| dir.path());
+        subdirs.sort_by_key(|dir| dir.path());
 
         let collection_size = matches
             .value_of("number")
-            .expect("required argument")
-            .parse::<usize>()
-            .map_err(|_| ArtGenError::NonNegativeNumberRequired)
+            .expect("required_argument")
+            .parse::<u128>()
+            .with_context(|| ArtGenError::InvalidCollectionSize)
             .unwrap();
 
         println!(
-            "\n{} {}\n",
+            "\n{}{}\n",
+            PALETTE_EMOJI,
             style("We're generating some digital art!").yellow().bold(),
-            PALETTE_EMOJI
         );
 
         // Create a HashMap to track which assets have been generated
@@ -60,33 +72,30 @@ impl GenericCommand for Generate {
         // Create an output directory to store the generated assets
         fs::create_dir_all(output_dir)?;
 
-        let num_generated: usize = fs::read_dir(output_dir).unwrap().count();
+        let num_generated: u128 = fs::read_dir(output_dir)
+            .unwrap()
+            .count()
+            .try_into()
+            .unwrap();
 
         let metadata_dir = METADATA_OUTPUT;
         // Create a metadata directory to store the generated asset metadata
         fs::create_dir_all(metadata_dir)?;
 
         // TODO Put this into a dedicated function
-        let mut rarity_tracker: Vec<Vec<(String, u32)>> = Vec::new();
+        let mut rarity_tracker: Vec<Vec<(String, u128)>> = Vec::new();
 
-        for folder in &subfolders {
-            let mut layer_rarity: Vec<(String, u32)> = Vec::new();
-            for i in fs::read_dir(folder.path()).unwrap() {
-                let file = &i.unwrap().path();
-                let rarity_weight: String = file
-                    .clone()
-                    .file_stem()
-                    .unwrap()
-                    .to_os_string()
-                    .into_string()
-                    .unwrap()
-                    .chars()
-                    .take(2)
-                    .collect();
+        for folder in subdirs {
+            let mut layer_rarity: Vec<(String, u128)> = Vec::new();
+            for file in fs::read_dir(folder.path()).unwrap() {
+                let file = file.unwrap().path();
+
+                // Get the first two characters of the file name (rarity weight)
+                let rarity_weight = &file.file_stem().unwrap().to_str().unwrap()[..2];
 
                 layer_rarity.push((
                     file.display().to_string(),
-                    rarity_weight.parse::<u32>().unwrap(),
+                    rarity_weight.parse::<u128>().unwrap(),
                 ));
             }
             rarity_tracker.push(layer_rarity);
@@ -98,20 +107,20 @@ impl GenericCommand for Generate {
             let base_layer;
             let metadata;
 
-            let current_id = (i as usize) + num_generated;
+            let current_id = i + num_generated;
 
             loop {
-                let (image_full_traits, base_layer_image, built_metadata) =
-                    gen_asset(&rarity_tracker, current_id)?;
+                let asset = gen_asset(&rarity_tracker, current_id)?;
 
-                if !asset_already_generated.contains_key(&image_full_traits) {
-                    current_image = image_full_traits;
-                    base_layer = base_layer_image;
-                    metadata = built_metadata;
+                if !asset_already_generated.contains_key(&asset.layers) {
+                    current_image = asset.layers;
+                    base_layer = asset.base_layer;
+                    metadata = asset.metadata;
                     break;
                 }
             }
             asset_already_generated.insert(current_image, true);
+
             // TODO Add operation in the case that no new assets can be generated
 
             base_layer.save(format!("{}/{}.png", output_dir, current_id))?;
@@ -128,14 +137,7 @@ impl GenericCommand for Generate {
     }
 }
 
-fn gen_asset(
-    rarity_tracker: &[Vec<(String, u32)>],
-    current_id: usize,
-) -> Result<(
-    std::collections::BTreeSet<std::string::String>,
-    image::DynamicImage,
-    Metadata,
-)> {
+fn gen_asset(rarity_tracker: &[Vec<(String, u128)>], current_id: u128) -> Result<Asset> {
     // Create a random number generator
     let mut rng = rand::thread_rng();
 
@@ -149,19 +151,14 @@ fn gen_asset(
         .unwrap()
         .file_stem()
         .unwrap()
-        .to_os_string()
-        .into_string()
-        .unwrap();
+        .to_str()
+        .unwrap()[2..];
 
-    let cropped_base_trait_metadata = crop_characters(base_trait_metadata, 2);
     let base_layer_metadata = &Path::new(base_layer_selection)
         .file_stem()
         .unwrap()
-        .to_os_string()
-        .into_string()
-        .unwrap();
-
-    let cropped_base_layer_metadata = crop_characters(base_layer_metadata, 2);
+        .to_str()
+        .unwrap()[2..];
 
     // Open the base layer image in order to be overlayed
     let mut base_layer_image = image::open(&base_layer_selection).unwrap();
@@ -169,45 +166,36 @@ fn gen_asset(
     // Create a BTreeSet to store the top layers that get selected
     let mut top_layers = BTreeSet::new();
 
-    let mut metadata_attributes: Vec<BTreeMap<String, String>> = Vec::new();
+    let mut metadata_attributes: Vec<Trait> = Vec::new();
 
     for layer_rarity in &rarity_tracker[1..] {
         let layer_dist = WeightedIndex::new(layer_rarity.iter().map(|item| item.1)).unwrap();
 
         let file = &layer_rarity[layer_dist.sample(&mut rng)].0;
         top_layers.insert(file);
-        let file_stem = Path::new(file)
-            .file_stem()
-            .unwrap()
-            .to_os_string()
-            .into_string()
-            .unwrap();
-        let parent_folder = Path::new(file)
+        let file_stem = &Path::new(file).file_stem().unwrap().to_str().unwrap()[2..];
+        let parent_folder = &Path::new(file)
             .parent()
             .unwrap()
             .file_stem()
             .unwrap()
-            .to_os_string()
-            .into_string()
-            .unwrap();
-        let cropped_layer_value = crop_characters(&file_stem, 2);
+            .to_str()
+            .unwrap()[2..];
 
-        let cropped_folder_name = crop_characters(&parent_folder, 2);
-        let mut metadata_attribute_entries = BTreeMap::new();
-        metadata_attribute_entries
-            .insert("trait_type".to_string(), cropped_folder_name.to_string());
-        metadata_attribute_entries.insert("value".to_string(), cropped_layer_value.to_string());
+        let new_trait = Trait {
+            trait_type: parent_folder,
+            value: file_stem,
+        };
 
-        metadata_attributes.push(metadata_attribute_entries);
+        metadata_attributes.push(new_trait);
     }
 
-    let mut metadata_attribute_entries = BTreeMap::new();
-    metadata_attribute_entries.insert(
-        "trait_type".to_string(),
-        cropped_base_trait_metadata.to_string(),
-    );
-    metadata_attribute_entries.insert("value".to_string(), cropped_base_layer_metadata.to_string());
-    metadata_attributes.push(metadata_attribute_entries);
+    let base_trait = Trait {
+        trait_type: base_trait_metadata,
+        value: base_layer_metadata,
+    };
+
+    metadata_attributes.push(base_trait);
 
     // TODO Abstract metadata fields to a separate config
     let metadata = Metadata {
@@ -227,6 +215,11 @@ fn gen_asset(
         all_layers.insert(layer.to_string());
     }
 
-    // TODO Create a struct for the asset to clean all of this up
-    Ok((all_layers, base_layer_image, metadata))
+    let asset = Asset {
+        layers: all_layers,
+        base_layer: base_layer_image,
+        metadata: metadata,
+    };
+
+    Ok(asset)
 }
