@@ -19,16 +19,15 @@ struct Asset<'a> {
     metadata: Metadata<'a>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 struct Metadata<'a> {
     name: String,
     description: String,
     image: String,
-    #[serde(borrow = "'a ")]
     attributes: Vec<Trait<'a>>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize)]
 struct Trait<'a> {
     trait_type: &'a str,
     value: &'a str,
