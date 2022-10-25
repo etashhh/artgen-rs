@@ -4,7 +4,8 @@ use image::imageops::overlay;
 use image::DynamicImage;
 use rand::distributions::WeightedIndex;
 use rand::prelude::*;
-use rustc_hash::FxHashMap;
+use rand_distr::WeightedAliasIndex;
+use rustc_hash::FxHashSet;
 use serde::Serialize;
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
@@ -71,7 +72,7 @@ impl GenericCommand for Generate {
         );
 
         // Create a HashMap to track which assets have been generated
-        let mut asset_already_generated = FxHashMap::default();
+        let mut asset_already_generated = FxHashSet::default();
 
         let output_dir = ASSETS_OUTPUT;
         // Create an output directory to store the generated assets
@@ -123,14 +124,14 @@ impl GenericCommand for Generate {
             loop {
                 let asset = gen_asset(&rarity_tracker, current_id)?;
 
-                if !asset_already_generated.contains_key(&asset.layers) {
+                if !asset_already_generated.contains(&asset.layers) {
                     current_image = asset.layers;
                     base_layer = asset.base_layer;
                     metadata = asset.metadata;
                     break;
                 }
             }
-            asset_already_generated.insert(current_image, true);
+            asset_already_generated.insert(current_image);
 
             // TODO Add operation in the case that no new assets can be generated
 
@@ -152,7 +153,9 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
     // Create a random number generator
     let mut rng = rand::thread_rng();
 
-    let base_dist = WeightedIndex::new(rarity_tracker[0].iter().map(|item| item.weight)).unwrap();
+    let base_dist =
+        WeightedAliasIndex::new(rarity_tracker[0].iter().map(|item| item.weight).collect())
+            .unwrap();
 
     // Select the base layer
     let base_layer_selection = &rarity_tracker[0][base_dist.sample(&mut rng)].file;
@@ -180,7 +183,8 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
     let mut metadata_attributes: Vec<Trait> = Vec::new();
 
     for layer_rarity in &rarity_tracker[1..] {
-        let layer_dist = WeightedIndex::new(layer_rarity.iter().map(|item| item.weight)).unwrap();
+        let layer_dist =
+            WeightedAliasIndex::new(layer_rarity.iter().map(|item| item.weight).collect()).unwrap();
 
         let file = &layer_rarity[layer_dist.sample(&mut rng)].file;
         top_layers.insert(file);
