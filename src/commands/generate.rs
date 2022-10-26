@@ -71,9 +71,6 @@ impl GenericCommand for Generate {
             style("We're generating some digital art!").yellow().bold(),
         );
 
-        // Create a HashMap to track which assets have been generated
-        let mut asset_already_generated = FxHashSet::default();
-
         let output_dir = ASSETS_OUTPUT;
         // Create an output directory to store the generated assets
         fs::create_dir_all(output_dir)?;
@@ -113,6 +110,9 @@ impl GenericCommand for Generate {
             rarity_tracker.push(layer_rarity);
         }
 
+        // Create a HashMap to track which assets have been generated
+        let mut asset_already_generated = FxHashSet::default();
+
         // Create the desired number of assets for the collection
         for i in 0..collection_size {
             let current_image;
@@ -121,6 +121,9 @@ impl GenericCommand for Generate {
 
             let current_id = i + num_generated;
 
+            let mut retries = 0;
+
+            // TODO Improve this system so that we can return a custom error as opposed to panicking
             loop {
                 let asset = gen_asset(&rarity_tracker, current_id)?;
 
@@ -130,10 +133,20 @@ impl GenericCommand for Generate {
                     metadata = asset.metadata;
                     break;
                 }
-            }
-            asset_already_generated.insert(current_image);
 
-            // TODO Add operation in the case that no new assets can be generated
+                if retries == 10 {
+                    panic!(
+                        "{}{}",
+                        ERROR_EMOJI,
+                        style("Not enough layers for requested collection size")
+                            .red()
+                            .bold(),
+                    )
+                }
+                retries += 1;
+            }
+
+            asset_already_generated.insert(current_image);
 
             base_layer.save(format!("{}/{}.png", output_dir, current_id))?;
 
