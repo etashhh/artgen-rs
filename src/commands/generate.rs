@@ -9,7 +9,8 @@ use rustc_hash::FxHashSet;
 use serde::Serialize;
 use std::collections::{BTreeSet, HashMap};
 use std::fs;
-use std::io::BufWriter;
+use std::io::Write;
+use std::io::{BufReader, BufWriter};
 use std::path::Path;
 
 use crate::commands::prelude::*;
@@ -113,6 +114,9 @@ impl GenericCommand for Generate {
         // Create a HashMap to track which assets have been generated
         let mut asset_already_generated = FxHashSet::default();
 
+        let stdout = std::io::stdout();
+        let mut lock = stdout.lock();
+
         // Create the desired number of assets for the collection
         for i in 0..collection_size {
             let current_image;
@@ -155,7 +159,7 @@ impl GenericCommand for Generate {
             let bw = BufWriter::new(f);
             serde_json::to_writer_pretty(bw, &metadata).expect("Unable to write the metadata file");
 
-            println!("Generated ID {}", current_id);
+            writeln!(lock, "Generated ID {}", current_id)?;
         }
 
         Ok(())
