@@ -7,6 +7,7 @@ use crate::constants::*;
 pub enum ArtGenError {
     MissingDirectory(String),
     InvalidCollectionSize,
+    InsufficientLayers,
 }
 /*
 impl ArtGenError {
@@ -40,6 +41,16 @@ impl fmt::Display for ArtGenError {
                     "\n\n{}{} ",
                     ERROR_EMOJI,
                     style("Collection size `n` must be a positive integer value")
+                        .red()
+                        .bold(),
+                )
+            }
+            Self::InsufficientLayers => {
+                write!(
+                    f,
+                    "\n\n{}{} ",
+                    ERROR_EMOJI,
+                    style("Not enough layers for requested collection size")
                         .red()
                         .bold(),
                 )
