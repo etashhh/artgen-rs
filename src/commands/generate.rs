@@ -2,15 +2,14 @@ use anyhow::{Context, Result};
 use console::style;
 use image::imageops::overlay;
 use image::DynamicImage;
-use rand::distributions::WeightedIndex;
 use rand::prelude::*;
 use rand_distr::WeightedAliasIndex;
 use rustc_hash::FxHashSet;
 use serde::Serialize;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::BTreeSet;
 use std::fs;
+use std::io::BufWriter;
 use std::io::Write;
-use std::io::{BufReader, BufWriter};
 use std::path::Path;
 
 use crate::commands::prelude::*;
@@ -45,12 +44,11 @@ pub struct Generate;
 
 impl GenericCommand for Generate {
     fn run(&self, matches: &ArgMatches) -> Result<()> {
-        let path = matches.value_of("root").expect("required argument");
+        let path = matches.value_of("root").unwrap();
 
         // Get the folders for each layer
-        let root_dir = fs::read_dir(path)
-            .with_context(|| ArtGenError::MissingDirectory(path.to_string()))
-            .unwrap();
+        let root_dir =
+            fs::read_dir(path).with_context(|| ArtGenError::MissingDirectory(path.to_string()))?;
 
         let mut subdirs: Vec<fs::DirEntry> = root_dir.map(|subdir| subdir.unwrap()).collect();
 
@@ -63,8 +61,7 @@ impl GenericCommand for Generate {
             .value_of("number")
             .expect("required_argument")
             .parse::<u128>()
-            .with_context(|| ArtGenError::InvalidCollectionSize)
-            .unwrap();
+            .with_context(|| ArtGenError::InvalidCollectionSize)?;
 
         println!(
             "\n{}{}\n",
@@ -76,11 +73,7 @@ impl GenericCommand for Generate {
         // Create an output directory to store the generated assets
         fs::create_dir_all(output_dir)?;
 
-        let num_generated: u128 = fs::read_dir(output_dir)
-            .unwrap()
-            .count()
-            .try_into()
-            .unwrap();
+        let num_generated: u128 = fs::read_dir(output_dir).unwrap().count().try_into()?;
 
         let metadata_dir = METADATA_OUTPUT;
 
@@ -104,7 +97,7 @@ impl GenericCommand for Generate {
                 // (Cyan, 01)
                 let layer = Layer {
                     file: file.display().to_string(),
-                    weight: weight.parse::<u128>().unwrap(),
+                    weight: weight.parse::<u128>()?,
                 };
                 layer_rarity.push(layer);
             }
@@ -154,10 +147,9 @@ impl GenericCommand for Generate {
 
             base_layer.save(format!("{}/{}.png", output_dir, current_id))?;
 
-            let f = fs::File::create(format!("{}/{}", metadata_dir, current_id))
-                .expect("Unable to create the metadata file");
+            let f = fs::File::create(format!("{}/{}", metadata_dir, current_id))?;
             let bw = BufWriter::new(f);
-            serde_json::to_writer_pretty(bw, &metadata).expect("Unable to write the metadata file");
+            serde_json::to_writer_pretty(bw, &metadata)?;
 
             writeln!(lock, "Generated ID {}", current_id)?;
         }
@@ -171,13 +163,12 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
     let mut rng = rand::thread_rng();
 
     let base_dist =
-        WeightedAliasIndex::new(rarity_tracker[0].iter().map(|item| item.weight).collect())
-            .unwrap();
+        WeightedAliasIndex::new(rarity_tracker[0].iter().map(|item| item.weight).collect())?;
 
     // Select the base layer
-    let base_layer_selection = &rarity_tracker[0][base_dist.sample(&mut rng)].file;
+    let base_layer_selection = Path::new(&rarity_tracker[0][base_dist.sample(&mut rng)].file);
 
-    let base_trait_metadata = &Path::new(base_layer_selection)
+    let base_trait_metadata = &base_layer_selection
         .parent()
         .unwrap()
         .file_stem()
@@ -185,14 +176,10 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
         .to_str()
         .unwrap()[2..];
 
-    let base_layer_metadata = &Path::new(base_layer_selection)
-        .file_stem()
-        .unwrap()
-        .to_str()
-        .unwrap()[2..];
+    let base_layer_metadata = &base_layer_selection.to_str().unwrap()[2..];
 
     // Open the base layer image in order to be overlayed
-    let mut base_layer = image::open(&base_layer_selection).unwrap();
+    let mut base_layer = image::open(&base_layer_selection)?;
 
     // Create a BTreeSet to store the top layers that get selected
     let mut top_layers = BTreeSet::new();
@@ -201,7 +188,7 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
 
     for layer_rarity in &rarity_tracker[1..] {
         let layer_dist =
-            WeightedAliasIndex::new(layer_rarity.iter().map(|item| item.weight).collect()).unwrap();
+            WeightedAliasIndex::new(layer_rarity.iter().map(|item| item.weight).collect())?;
 
         let file = &layer_rarity[layer_dist.sample(&mut rng)].file;
         top_layers.insert(file);
@@ -239,11 +226,12 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
 
     // Create a BTreeSet to store all the layers
     let mut layers = BTreeSet::new();
-    layers.insert(base_layer_selection.to_string());
+
+    layers.insert(base_layer_selection.to_str().unwrap().to_string());
 
     // Go through the toplayers and overlay the base layer with each toplayer in order
     for layer in top_layers {
-        overlay(&mut base_layer, &image::open(&layer).unwrap(), 0, 0);
+        overlay(&mut base_layer, &image::open(&layer)?, 0, 0);
         layers.insert(layer.to_string());
     }
 
