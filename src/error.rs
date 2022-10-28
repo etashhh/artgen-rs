@@ -8,21 +8,10 @@ pub enum ArtGenError {
     MissingDirectory(String),
     InvalidCollectionSize,
     InsufficientLayers,
+    IncorrectDirectoryConvention(String),
+    IncorrectFileConvention(String),
 }
-/*
-impl ArtGenError {
-    pub fn output(&self) -> String {
-        match self {
-            ArtGenError::MissingDirectory(directory) => {
-                format!("Could not locate directory `{:?}`", directory)
-            }
-            ArtGenError::NonNegativeNumberRequired => {
-                "Non-negative number required for collection size".into()
-            }
-        }
-    }
-}
-*/
+
 impl fmt::Display for ArtGenError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
@@ -53,6 +42,26 @@ impl fmt::Display for ArtGenError {
                     style("Not enough layers for requested collection size")
                         .red()
                         .bold(),
+                )
+            }
+            Self::IncorrectDirectoryConvention(directory) => {
+                write!(
+                    f,
+                    "\n\n{}{} `{}` {}",
+                    ERROR_EMOJI,
+                    style("Incorrect convention for directory:").red().bold(),
+                    directory,
+                    style("Make sure the directory is of form <weight><directory_name>").red(),
+                )
+            }
+            Self::IncorrectFileConvention(directory) => {
+                write!(
+                    f,
+                    "\n\n{}{} `{}` {}",
+                    ERROR_EMOJI,
+                    style("Incorrect convention for file:").red().bold(),
+                    directory,
+                    style("Make sure the file is of form <weight><file_name>").red(),
                 )
             }
         }

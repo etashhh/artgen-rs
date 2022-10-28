@@ -46,6 +46,8 @@ impl GenericCommand for Generate {
     fn run(&self, matches: &ArgMatches) -> Result<()> {
         let path = matches.value_of("root").unwrap();
 
+        // TODO Add handling of error if dir or file doesn't follow naming convention
+
         // Get the folders for each layer
         let root_dir =
             fs::read_dir(path).with_context(|| ArtGenError::MissingDirectory(path.to_string()))?;
