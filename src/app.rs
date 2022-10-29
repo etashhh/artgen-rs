@@ -54,6 +54,13 @@ pub fn build_app() -> Command<'static> {
                         .possible_values(&["yes", "no"])
                         .value_name("fresh flag")
                         .default_value("no"),
+                )
+                .arg(
+                    Arg::new("output")
+                        .long("output")
+                        .short('o')
+                        .help("Output build dir for assets and metadata")
+                        .takes_value(true),
                 ),
         )
 }
