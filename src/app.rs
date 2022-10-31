@@ -42,19 +42,10 @@ pub fn build_app() -> Command<'static> {
                         .value_name("unique flag")
                         .default_value("yes"),
                 )
-                .arg(
-                    Arg::new("fresh")
-                        .long("fresh")
-                        .short('f')
-                        .help(
-                            "Boolean flag to indicate whether the generated set \
+                .arg(Arg::new("fresh").long("fresh").short('f').help(
+                    "Boolean flag to indicate whether the generated set \
                                 should wipe existing assets and start fresh",
-                        )
-                        .takes_value(true)
-                        .possible_values(&["yes", "no"])
-                        .value_name("fresh flag")
-                        .default_value("no"),
-                )
+                ))
                 .arg(
                     Arg::new("output")
                         .long("output")
@@ -62,6 +53,12 @@ pub fn build_app() -> Command<'static> {
                         .help("Output build dir for assets and metadata")
                         .takes_value(true),
                 ),
+        )
+        .subcommand(
+            Command::new("select")
+                .alias("sel")
+                .about("Manually generate single asset by selecting input layers")
+                .arg(Arg::new("layers").required(true).min_values(1)),
         )
 }
 

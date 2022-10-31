@@ -71,6 +71,11 @@ impl GenericCommand for Generate {
             style("We're generating some digital art!").yellow().bold(),
         );
 
+        if matches.is_present("fresh") {
+            fs::remove_dir_all(ASSETS_OUTPUT)?;
+            fs::remove_dir_all(METADATA_OUTPUT)?;
+        }
+
         let output_dir = ASSETS_OUTPUT;
         // Create an output directory to store the generated assets
         fs::create_dir_all(output_dir)?;
@@ -222,7 +227,7 @@ fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset
     let metadata = Metadata {
         name: format!("<my_project> #{}", current_id),
         description: "<my_project> is a cultural revolution.".to_owned(),
-        image: format!("ipfs://hash/{}.png", current_id),
+        image: format!("ar://hash/{}.png", current_id),
         attributes: metadata_attributes,
     };
 

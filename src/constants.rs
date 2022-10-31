@@ -3,10 +3,10 @@ use console::Emoji;
 pub const ASSETS_INPUT: &str = "assets";
 
 // Engine output asset folder
-pub const ASSETS_OUTPUT: &str = "outputs";
+pub const ASSETS_OUTPUT: &str = "generated/outputs";
 
 // Output metadata folder
-pub const METADATA_OUTPUT: &str = "metadata";
+pub const METADATA_OUTPUT: &str = "generated/metadata";
 
 // Configuration file
 pub const CONFIG: &str = "config.json";

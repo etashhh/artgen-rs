@@ -1,5 +1,4 @@
 /target
 /inputs
-/outputs
-/metadata
+/generated
 .DS_Store
