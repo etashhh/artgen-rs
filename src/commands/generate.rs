@@ -21,6 +21,7 @@ struct Asset<'a> {
     metadata: Metadata<'a>,
 }
 
+// TODO Implement `Hash` for this struct. Should make duplicate checking a lot easier.
 #[derive(Serialize)]
 struct Metadata<'a> {
     name: String,

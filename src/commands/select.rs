@@ -62,11 +62,12 @@ impl GenericCommand for Select {
         let stdout = std::io::stdout();
         let mut lock = stdout.lock();
 
-        let current_id: u128 = fs::read_dir(output_dir).unwrap().count().try_into()?;
+        let current_id: u128 = fs::read_dir(output_dir)?.count().try_into()?;
 
         let asset = gen_asset(layers, current_id)?;
         let base_layer = asset.base_layer;
         let metadata = asset.metadata;
+
         base_layer.save(format!("{}/{}.png", output_dir, current_id))?;
 
         let f = fs::File::create(format!("{}/{}", metadata_dir, current_id))?;
