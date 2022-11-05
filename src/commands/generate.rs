@@ -166,6 +166,7 @@ impl GenericCommand for Generate {
     }
 }
 
+// TODO See if you can put this into the impl block, might be useful
 fn gen_asset(rarity_tracker: &Vec<Vec<Layer>>, current_id: u128) -> Result<Asset> {
     // Create a random number generator
     let mut rng = rand::thread_rng();
